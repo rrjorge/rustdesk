@@ -277,58 +277,31 @@ jobs:
         name: tecs-remote-windows-x64-${{ github.event.inputs.build_type }}
         path: target/${{ github.event.inputs.build_type }}/tecs-remote.exe
         retention-days: 30
-    
-    - name: 📋 Criar README
+
+  
+ - name: 📋 Criar README
       run: |
         $buildType = "${{ github.event.inputs.build_type }}"
-        $readme = @"
-════════════════════════════════════════════════════════════
-              TECS Remote - Build Automático
-════════════════════════════════════════════════════════════
-
-Build Type: $buildType
-Build Date: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
-Build Number: ${{ github.run_number }}
-Commit: ${{ github.sha }}
-
-Configurações:
-- Servidor: $env:RUSTDESK_SERVER:21116
-- Relay: $env:RUSTDESK_SERVER:21117
-- App Name: $env:APP_NAME
-- Chave Pública: Configurada ✓
-
-Arquivos:
-- tecs-remote.exe
-
-Próximos Passos:
-1. Baixe o artefato
-2. Extraia tecs-remote.exe
-3. Teste em Windows 10/11
-4. Distribua
-
-Suporte:
-- Email: contato@tecs.net.br
-- WhatsApp: (48) 99109-9796
-- Site: https://tecs.net.br
-
-════════════════════════════════════════════════════════════
-"@
-        $readme | Out-File -FilePath "target/$buildType/README.txt" -Encoding UTF8
-      shell: pwsh
-    
-    - name: 📤 Upload README
-      uses: actions/upload-artifact@v3
-      with:
-        name: tecs-remote-windows-x64-${{ github.event.inputs.build_type }}
-        path: target/${{ github.event.inputs.build_type }}/README.txt
-        retention-days: 30
-    
-    - name: 🎉 Resumo
-      run: |
-        Write-Host "`n✅ COMPILAÇÃO CONCLUÍDA!" -ForegroundColor Green
-        Write-Host "`n📦 Artefato: tecs-remote-windows-x64-${{ github.event.inputs.build_type }}" -ForegroundColor Cyan
-        Write-Host "`n📥 Para baixar:" -ForegroundColor Yellow
-        Write-Host "   1. Vá para aba Actions" -ForegroundColor White
-        Write-Host "   2. Clique neste workflow" -ForegroundColor White
-        Write-Host "   3. Baixe o artefato" -ForegroundColor White
+        $readmeContent = "TECS Remote - Build Automatico`n`n"
+        $readmeContent += "Build Type: $buildType`n"
+        $readmeContent += "Build Date: $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')`n"
+        $readmeContent += "Build Number: ${{ github.run_number }}`n"
+        $readmeContent += "Commit: ${{ github.sha }}`n`n"
+        $readmeContent += "Configuracoes:`n"
+        $readmeContent += "- Servidor: $env:RUSTDESK_SERVER:21116`n"
+        $readmeContent += "- Relay: $env:RUSTDESK_SERVER:21117`n"
+        $readmeContent += "- App Name: $env:APP_NAME`n"
+        $readmeContent += "- Chave Publica: Configurada`n`n"
+        $readmeContent += "Arquivos: tecs-remote.exe`n`n"
+        $readmeContent += "Proximos Passos:`n"
+        $readmeContent += "1. Baixe o artefato`n"
+        $readmeContent += "2. Extraia tecs-remote.exe`n"
+        $readmeContent += "3. Teste em Windows 10/11`n"
+        $readmeContent += "4. Distribua`n`n"
+        $readmeContent += "Suporte:`n"
+        $readmeContent += "- Email: contato@tecs.net.br`n"
+        $readmeContent += "- WhatsApp: (48) 99109-9796`n"
+        $readmeContent += "- Site: https://tecs.net.br`n"
+        
+        $readmeContent | Out-File -FilePath "target/$buildType/README.txt" -Encoding UTF8
       shell: pwsh
