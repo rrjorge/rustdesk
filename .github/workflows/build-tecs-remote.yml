@@ -19,7 +19,7 @@ env:
   APP_NAME: ${{ secrets.APP_NAME }}
 
 jobs:
-  build-windows:
+  build_windows:
     runs-on: windows-latest
     
     steps:
