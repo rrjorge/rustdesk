@@ -176,9 +176,7 @@ jobs:
           exit 1
         }
         $newServers = @"
-pub const RENDEZVOUS_SERVERS: &'static [&'static str] = &[
-    "$server`:21116"
-];
+pub const RENDEZVOUS_SERVERS: &'static [&'static str] = &["$server`:21116"];
 "@
         $configContent = $configContent -replace 'pub const RENDEZVOUS_SERVERS:\s*&''static\s*\[&''static str\]\s*=\s*&\[[\s\S]*?\];', $newServers
         
