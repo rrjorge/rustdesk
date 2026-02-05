@@ -23,16 +23,16 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - name: 📥 Checkout código
+    - name: Checkout codigo
       uses: actions/checkout@v4
       
-    - name: 🔧 Instalar Rust
+    - name: Instalar Rust
       uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
         targets: x86_64-pc-windows-msvc
     
-    - name: 📦 Cache Cargo
+    - name: Cache Cargo
       uses: actions/cache@v3
       with:
         path: |
@@ -45,7 +45,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-
     
-    - name: 📦 Cache vcpkg
+    - name: Cache vcpkg
       uses: actions/cache@v3
       with:
         path: |
@@ -55,17 +55,16 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-vcpkg-
     
-    - name: 🔧 Instalar LLVM
+    - name: Instalar LLVM
       run: |
-        Write-Host "📥 Instalando LLVM..." -ForegroundColor Cyan
+        Write-Host "Instalando LLVM..." -ForegroundColor Cyan
         choco install llvm -y
         $env:PATH = "C:\Program Files\LLVM\bin;$env:PATH"
-        [Environment]::SetEnvironmentVariable("PATH", $env:PATH, "Machine")
       shell: pwsh
     
-    - name: 🔧 Instalar vcpkg e dependências
+    - name: Instalar vcpkg e dependencias
       run: |
-        Write-Host "📦 Configurando vcpkg..." -ForegroundColor Cyan
+        Write-Host "Configurando vcpkg..." -ForegroundColor Cyan
         
         if (!(Test-Path "C:\vcpkg")) {
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
@@ -75,7 +74,7 @@ jobs:
         
         cd C:\vcpkg
         
-        Write-Host "📦 Instalando dependências..." -ForegroundColor Yellow
+        Write-Host "Instalando dependencias..." -ForegroundColor Yellow
         .\vcpkg install libvpx:x64-windows-static
         .\vcpkg install libyuv:x64-windows-static  
         .\vcpkg install opus:x64-windows-static
@@ -84,72 +83,67 @@ jobs:
         $env:VCPKG_ROOT = "C:\vcpkg"
         [Environment]::SetEnvironmentVariable("VCPKG_ROOT", "C:\vcpkg", "Process")
         
-        Write-Host "✅ vcpkg configurado!" -ForegroundColor Green
+        Write-Host "vcpkg configurado!" -ForegroundColor Green
       shell: pwsh
       
-    - name: 🎨 Verificar logo TECS
+    - name: Verificar logo TECS
       run: |
-        Write-Host "🔍 Verificando logos..." -ForegroundColor Cyan
+        Write-Host "Verificando logos..." -ForegroundColor Cyan
         
         $logos = @("res/32x32.png", "res/128x128.png", "res/128x128@2x.png", "res/icon.ico")
         $missing = @()
         
         foreach ($logo in $logos) {
           if (Test-Path $logo) {
-            Write-Host "  ✅ $logo encontrado" -ForegroundColor Green
+            Write-Host "  OK: $logo" -ForegroundColor Green
           } else {
-            Write-Host "  ❌ $logo NÃO encontrado!" -ForegroundColor Red
+            Write-Host "  FALTA: $logo" -ForegroundColor Red
             $missing += $logo
           }
         }
         
         if ($missing.Count -gt 0) {
-          Write-Host "⚠️ AVISO: Alguns logos não foram encontrados!" -ForegroundColor Yellow
-          Write-Host "   Logos faltando: $($missing -join ', ')" -ForegroundColor Yellow
-          Write-Host "   Os logos padrão do RustDesk serão usados." -ForegroundColor Yellow
+          Write-Host "AVISO: Alguns logos nao foram encontrados!" -ForegroundColor Yellow
+          Write-Host "Logos faltando: $($missing -join ', ')" -ForegroundColor Yellow
         } else {
-          Write-Host "✅ Todos os logos TECS encontrados!" -ForegroundColor Green
+          Write-Host "Todos os logos TECS encontrados!" -ForegroundColor Green
         }
       shell: pwsh
     
-    - name: 📝 Converter logo para Base64
+    - name: Converter logo para Base64
       run: |
-        Write-Host "🔐 Convertendo logo para Base64..." -ForegroundColor Cyan
+        Write-Host "Convertendo logo para Base64..." -ForegroundColor Cyan
         
         if (Test-Path "res/128x128.png") {
           $imageBytes = [System.IO.File]::ReadAllBytes("res/128x128.png")
           $base64String = [System.Convert]::ToBase64String($imageBytes)
           $dataUri = "data:image/png;base64,$base64String"
-          
           $dataUri | Out-File -FilePath "logo-base64.txt" -Encoding UTF8 -NoNewline
-          
-          Write-Host "✅ Logo convertido para Base64!" -ForegroundColor Green
+          Write-Host "Logo convertido!" -ForegroundColor Green
         } else {
-          Write-Host "⚠️ Logo 128x128.png não encontrado, pulando conversão" -ForegroundColor Yellow
+          Write-Host "Logo nao encontrado, pulando conversao" -ForegroundColor Yellow
           "" | Out-File -FilePath "logo-base64.txt" -Encoding UTF8 -NoNewline
         }
       shell: pwsh
     
-    - name: ✏️ Modificar Cargo.toml
+    - name: Modificar Cargo.toml
       run: |
-        Write-Host "✏️ Modificando Cargo.toml..." -ForegroundColor Cyan
+        Write-Host "Modificando Cargo.toml..." -ForegroundColor Cyan
         
         $cargoContent = Get-Content "Cargo.toml" -Raw
-        
         $cargoContent = $cargoContent -replace 'name\s*=\s*"rustdesk"', 'name = "tecs-remote"'
         $cargoContent = $cargoContent -replace 'default-run\s*=\s*"rustdesk"', 'default-run = "tecs-remote"'
         $cargoContent = $cargoContent -replace 'name\s*=\s*"RustDesk"', 'name = "TECS Remote"'
         $cargoContent = $cargoContent -replace 'identifier\s*=\s*"com\.carriez\.rustdesk"', 'identifier = "br.net.tecs.remote"'
         $cargoContent = $cargoContent -replace 'default\s*=\s*\["use_dasp"\]', 'default = ["use_dasp", "inline"]'
-        
         $cargoContent | Out-File -FilePath "Cargo.toml" -Encoding UTF8 -NoNewline
         
-        Write-Host "✅ Cargo.toml modificado!" -ForegroundColor Green
+        Write-Host "Cargo.toml modificado!" -ForegroundColor Green
       shell: pwsh
     
-    - name: ✏️ Modificar config.rs
+    - name: Modificar config.rs
       run: |
-        Write-Host "✏️ Modificando config.rs..." -ForegroundColor Cyan
+        Write-Host "Modificando config.rs..." -ForegroundColor Cyan
         
         $configPath = "libs/hbb_common/src/config.rs"
         $configContent = Get-Content $configPath -Raw
@@ -160,7 +154,7 @@ jobs:
         
         $server = $env:RUSTDESK_SERVER
         if ([string]::IsNullOrEmpty($server)) { 
-          Write-Host "⚠️ RUSTDESK_SERVER não configurado!" -ForegroundColor Red
+          Write-Host "ERRO: RUSTDESK_SERVER nao configurado!" -ForegroundColor Red
           exit 1
         }
         
@@ -169,17 +163,15 @@ jobs:
         
         $key = $env:RUSTDESK_KEY
         if ([string]::IsNullOrEmpty($key)) {
-          Write-Host "⚠️ RUSTDESK_KEY não configurado!" -ForegroundColor Red
+          Write-Host "ERRO: RUSTDESK_KEY nao configurado!" -ForegroundColor Red
           exit 1
         }
         $configContent = $configContent -replace 'pub const RS_PUB_KEY:\s*&''static str\s*=\s*"[^"]*";', "pub const RS_PUB_KEY: &'static str = ""$key"";"
         
         if (Test-Path "logo-base64.txt") {
           $base64Logo = Get-Content "logo-base64.txt" -Raw
-          
           if (![string]::IsNullOrEmpty($base64Logo)) {
-            Write-Host "🎨 Aplicando logo TECS em Base64..." -ForegroundColor Cyan
-            
+            Write-Host "Aplicando logo TECS..." -ForegroundColor Cyan
             $configContent = $configContent -replace '#\[cfg\(target_os\s*=\s*"macos"\)\]\s*pub const ICON:\s*&str\s*=\s*"[^"]*";', "#[cfg(target_os = ""macos"")]`npub const ICON: &str = ""$base64Logo"";"
             $configContent = $configContent -replace '#\[cfg\(not\(target_os\s*=\s*"macos"\)\)\]\s*pub const ICON:\s*&str\s*=\s*"[^"]*";', "#[cfg(not(target_os = ""macos""))]`npub const ICON: &str = ""$base64Logo"";"
           }
@@ -187,121 +179,125 @@ jobs:
         
         $configContent | Out-File -FilePath $configPath -Encoding UTF8 -NoNewline
         
-        Write-Host "✅ config.rs modificado!" -ForegroundColor Green
-        Write-Host "   Servidor: $server" -ForegroundColor Gray
-        Write-Host "   Key: $($key.Substring(0,20))..." -ForegroundColor Gray
+        Write-Host "config.rs modificado!" -ForegroundColor Green
+        Write-Host "Servidor: $server" -ForegroundColor Gray
+        Write-Host "Key: $($key.Substring(0,20))..." -ForegroundColor Gray
       shell: pwsh
     
-    - name: ✏️ Modificar common.rs
+    - name: Modificar common.rs
       run: |
-        Write-Host "✏️ Modificando common.rs..." -ForegroundColor Cyan
+        Write-Host "Modificando common.rs..." -ForegroundColor Cyan
         
         $commonPath = "src/common.rs"
         $commonContent = Get-Content $commonPath -Raw
-        
         $server = $env:RUSTDESK_SERVER
         $commonContent = $commonContent -replace 'let rendezvous_server\s*=\s*socket_client::get_target_addr\(&format!\(".*?:\{\}",\s*config::RENDEZVOUS_PORT\)\)\?;', "let rendezvous_server = socket_client::get_target_addr(&format!(""$server:{}"", config::RENDEZVOUS_PORT))?;"
-        
         $commonContent | Out-File -FilePath $commonPath -Encoding UTF8 -NoNewline
         
-        Write-Host "✅ common.rs modificado!" -ForegroundColor Green
+        Write-Host "common.rs modificado!" -ForegroundColor Green
       shell: pwsh
     
-    - name: ✏️ Modificar main.rs
+    - name: Modificar main.rs
       run: |
-        Write-Host "✏️ Modificando main.rs..." -ForegroundColor Cyan
+        Write-Host "Modificando main.rs..." -ForegroundColor Cyan
         
         $mainPath = "src/main.rs"
         $mainContent = Get-Content $mainPath -Raw
-        
         $mainContent = $mainContent -replace '//#!\[windows_subsystem\s*=\s*"windows"\]', '#![windows_subsystem = "windows"]'
-        
         $mainContent | Out-File -FilePath $mainPath -Encoding UTF8 -NoNewline
         
-        Write-Host "✅ main.rs modificado!" -ForegroundColor Green
+        Write-Host "main.rs modificado!" -ForegroundColor Green
       shell: pwsh
     
-    - name: 🔨 Compilar UI Resources
+    - name: Compilar UI Resources
       run: |
-        Write-Host "🔨 Compilando recursos da UI..." -ForegroundColor Cyan
+        Write-Host "Compilando recursos da UI..." -ForegroundColor Cyan
         python res/inline-sciter.py
-        Write-Host "✅ Recursos da UI compilados!" -ForegroundColor Green
+        Write-Host "Recursos da UI compilados!" -ForegroundColor Green
       shell: pwsh
     
-    - name: 🏗️ Build Release
+    - name: Build Release
       if: ${{ github.event.inputs.build_type == 'release' }}
       run: |
-        Write-Host "🏗️ Compilando RELEASE..." -ForegroundColor Cyan
-        Write-Host "⏱️ Isso pode demorar 30-60 minutos..." -ForegroundColor Yellow
-        
+        Write-Host "Compilando RELEASE..." -ForegroundColor Cyan
+        Write-Host "Isso pode demorar 30-60 minutos..." -ForegroundColor Yellow
         $env:VCPKG_ROOT = "C:\vcpkg"
-        
         cargo build --release --features inline
-        
-        Write-Host "✅ Compilação RELEASE concluída!" -ForegroundColor Green
+        Write-Host "Compilacao RELEASE concluida!" -ForegroundColor Green
       shell: pwsh
     
-    - name: 🏗️ Build Debug
+    - name: Build Debug
       if: ${{ github.event.inputs.build_type == 'debug' }}
       run: |
-        Write-Host "🏗️ Compilando DEBUG..." -ForegroundColor Cyan
-        
+        Write-Host "Compilando DEBUG..." -ForegroundColor Cyan
         $env:VCPKG_ROOT = "C:\vcpkg"
-        
         cargo build --features inline
-        
-        Write-Host "✅ Compilação DEBUG concluída!" -ForegroundColor Green
+        Write-Host "Compilacao DEBUG concluida!" -ForegroundColor Green
       shell: pwsh
     
-    - name: 📦 Verificar executável
+    - name: Verificar executavel
       run: |
-        Write-Host "📦 Verificando executável..." -ForegroundColor Cyan
+        Write-Host "Verificando executavel..." -ForegroundColor Cyan
         
         $buildType = "${{ github.event.inputs.build_type }}"
         $exePath = "target/$buildType/tecs-remote.exe"
         
         if (Test-Path $exePath) {
           $fileSize = (Get-Item $exePath).Length / 1MB
-          Write-Host "✅ Executável criado com sucesso!" -ForegroundColor Green
-          Write-Host "   Localização: $exePath" -ForegroundColor Gray
-          Write-Host "   Tamanho: $([math]::Round($fileSize, 2)) MB" -ForegroundColor Gray
+          Write-Host "Executavel criado com sucesso!" -ForegroundColor Green
+          Write-Host "Localizacao: $exePath" -ForegroundColor Gray
+          Write-Host "Tamanho: $([math]::Round($fileSize, 2)) MB" -ForegroundColor Gray
         } else {
-          Write-Host "❌ ERRO: Executável não foi criado!" -ForegroundColor Red
+          Write-Host "ERRO: Executavel nao foi criado!" -ForegroundColor Red
           exit 1
         }
       shell: pwsh
     
-    - name: 📤 Upload executável
+    - name: Criar README
+      run: |
+        $buildType = "${{ github.event.inputs.build_type }}"
+        $content = "TECS Remote - Build Automatico`n`n"
+        $content += "Build Type: $buildType`n"
+        $content += "Build Date: $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')`n"
+        $content += "Build Number: ${{ github.run_number }}`n"
+        $content += "Commit: ${{ github.sha }}`n`n"
+        $content += "Configuracoes:`n"
+        $content += "- Servidor: $env:RUSTDESK_SERVER:21116`n"
+        $content += "- Relay: $env:RUSTDESK_SERVER:21117`n"
+        $content += "- App Name: $env:APP_NAME`n"
+        $content += "- Chave Publica: Configurada`n`n"
+        $content += "Arquivos:`n"
+        $content += "- tecs-remote.exe`n`n"
+        $content += "Proximos Passos:`n"
+        $content += "1. Baixe o artefato do GitHub Actions`n"
+        $content += "2. Extraia tecs-remote.exe`n"
+        $content += "3. Teste em Windows 10/11`n"
+        $content += "4. Distribua para usuarios`n`n"
+        $content += "Suporte:`n"
+        $content += "- Email: contato@tecs.net.br`n"
+        $content += "- WhatsApp: (48) 99109-9796`n"
+        $content += "- Site: https://tecs.net.br`n"
+        
+        $content | Out-File -FilePath "target/$buildType/README.txt" -Encoding UTF8
+        Write-Host "README criado!" -ForegroundColor Green
+      shell: pwsh
+    
+    - name: Upload artefatos
       uses: actions/upload-artifact@v3
       with:
         name: tecs-remote-windows-x64-${{ github.event.inputs.build_type }}
-        path: target/${{ github.event.inputs.build_type }}/tecs-remote.exe
+        path: |
+          target/${{ github.event.inputs.build_type }}/tecs-remote.exe
+          target/${{ github.event.inputs.build_type }}/README.txt
         retention-days: 30
-
-  
-     - name: 📋 Criar README
-       run: |
-        $buildType = "${{ github.event.inputs.build_type }}"
-        $readmeContent = "TECS Remote - Build Automatico`n`n"
-        $readmeContent += "Build Type: $buildType`n"
-        $readmeContent += "Build Date: $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')`n"
-        $readmeContent += "Build Number: ${{ github.run_number }}`n"
-        $readmeContent += "Commit: ${{ github.sha }}`n`n"
-        $readmeContent += "Configuracoes:`n"
-        $readmeContent += "- Servidor: $env:RUSTDESK_SERVER:21116`n"
-        $readmeContent += "- Relay: $env:RUSTDESK_SERVER:21117`n"
-        $readmeContent += "- App Name: $env:APP_NAME`n"
-        $readmeContent += "- Chave Publica: Configurada`n`n"
-        $readmeContent += "Arquivos: tecs-remote.exe`n`n"
-        $readmeContent += "Proximos Passos:`n"
-        $readmeContent += "1. Baixe o artefato`n"
-        $readmeContent += "2. Extraia tecs-remote.exe`n"
-        $readmeContent += "3. Teste em Windows 10/11`n"
-        $readmeContent += "4. Distribua`n`n"
-        $readmeContent += "Suporte:`n"
-        $readmeContent += "- Email: contato@tecs.net.br`n"
-        $readmeContent += "- WhatsApp: (48) 99109-9796`n"
-        $readmeContent += "- Site: https://tecs.net.br`n"
-        
-        $readmeContent | Out-File -FilePath "target/$buildType/README.txt" -Encoding UTF8
+    
+    - name: Resumo
+      run: |
+        Write-Host "`nCOMPILACAO CONCLUIDA COM SUCESSO!" -ForegroundColor Green
+        Write-Host "`nArtefato: tecs-remote-windows-x64-${{ github.event.inputs.build_type }}" -ForegroundColor Cyan
+        Write-Host "`nPara baixar:" -ForegroundColor Yellow
+        Write-Host "1. Va para aba Actions" -ForegroundColor White
+        Write-Host "2. Clique neste workflow" -ForegroundColor White
+        Write-Host "3. Role ate Artifacts" -ForegroundColor White
+        Write-Host "4. Baixe o arquivo ZIP" -ForegroundColor White
       shell: pwsh
