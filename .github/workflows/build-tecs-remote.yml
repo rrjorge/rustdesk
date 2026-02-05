@@ -67,7 +67,6 @@ jobs:
       run: |
         Write-Host "📦 Configurando vcpkg..." -ForegroundColor Cyan
         
-        # Verificar se vcpkg já existe
         if (!(Test-Path "C:\vcpkg")) {
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
           cd C:\vcpkg
@@ -76,14 +75,12 @@ jobs:
         
         cd C:\vcpkg
         
-        # Instalar dependências
         Write-Host "📦 Instalando dependências..." -ForegroundColor Yellow
         .\vcpkg install libvpx:x64-windows-static
         .\vcpkg install libyuv:x64-windows-static  
         .\vcpkg install opus:x64-windows-static
         .\vcpkg install aom:x64-windows-static
         
-        # Configurar variável de ambiente
         $env:VCPKG_ROOT = "C:\vcpkg"
         [Environment]::SetEnvironmentVariable("VCPKG_ROOT", "C:\vcpkg", "Process")
         
@@ -116,7 +113,6 @@ jobs:
       shell: pwsh
     
     - name: 📝 Converter logo para Base64
-      id: logo_base64
       run: |
         Write-Host "🔐 Convertendo logo para Base64..." -ForegroundColor Cyan
         
@@ -125,7 +121,6 @@ jobs:
           $base64String = [System.Convert]::ToBase64String($imageBytes)
           $dataUri = "data:image/png;base64,$base64String"
           
-          # Salvar para usar no próximo step
           $dataUri | Out-File -FilePath "logo-base64.txt" -Encoding UTF8 -NoNewline
           
           Write-Host "✅ Logo convertido para Base64!" -ForegroundColor Green
@@ -141,15 +136,10 @@ jobs:
         
         $cargoContent = Get-Content "Cargo.toml" -Raw
         
-        # Modificar [package]
         $cargoContent = $cargoContent -replace 'name\s*=\s*"rustdesk"', 'name = "tecs-remote"'
         $cargoContent = $cargoContent -replace 'default-run\s*=\s*"rustdesk"', 'default-run = "tecs-remote"'
-        
-        # Modificar [package.metadata.bundle]
         $cargoContent = $cargoContent -replace 'name\s*=\s*"RustDesk"', 'name = "TECS Remote"'
         $cargoContent = $cargoContent -replace 'identifier\s*=\s*"com\.carriez\.rustdesk"', 'identifier = "br.net.tecs.remote"'
-        
-        # Habilitar inline feature
         $cargoContent = $cargoContent -replace 'default\s*=\s*\["use_dasp"\]', 'default = ["use_dasp", "inline"]'
         
         $cargoContent | Out-File -FilePath "Cargo.toml" -Encoding UTF8 -NoNewline
@@ -164,44 +154,34 @@ jobs:
         $configPath = "libs/hbb_common/src/config.rs"
         $configContent = Get-Content $configPath -Raw
         
-        # APP_NAME
         $appName = $env:APP_NAME
         if ([string]::IsNullOrEmpty($appName)) { $appName = "TECS Remote" }
-        $configContent = $configContent -replace 'APP_NAME:\s*Arc<RwLock<String>>\s*=\s*Arc::new\(RwLock::new\(".*?".to_owned\(\)\)\);', "APP_NAME: Arc<RwLock<String>> = Arc::new(RwLock::new(`"$appName`".to_owned()));"
+        $configContent = $configContent -replace 'APP_NAME:\s*Arc<RwLock<String>>\s*=\s*Arc::new\(RwLock::new\(".*?".to_owned\(\)\)\);', "APP_NAME: Arc<RwLock<String>> = Arc::new(RwLock::new(""$appName"".to_owned()));"
         
-        # RENDEZVOUS_SERVERS
         $server = $env:RUSTDESK_SERVER
         if ([string]::IsNullOrEmpty($server)) { 
           Write-Host "⚠️ RUSTDESK_SERVER não configurado!" -ForegroundColor Red
           exit 1
         }
-        $newServers = @"
-pub const RENDEZVOUS_SERVERS: &'static [&'static str] = &[
-"$server`:21116"
-];
-"@
+        
+        $newServers = "pub const RENDEZVOUS_SERVERS: &'static [&'static str] = &[`n    ""$server:21116""`n];"
         $configContent = $configContent -replace 'pub const RENDEZVOUS_SERVERS:\s*&''static\s*\[&''static str\]\s*=\s*&\[[\s\S]*?\];', $newServers
         
-        # RS_PUB_KEY
         $key = $env:RUSTDESK_KEY
         if ([string]::IsNullOrEmpty($key)) {
           Write-Host "⚠️ RUSTDESK_KEY não configurado!" -ForegroundColor Red
           exit 1
         }
-        $configContent = $configContent -replace 'pub const RS_PUB_KEY:\s*&''static str\s*=\s*"[^"]*";', "pub const RS_PUB_KEY: &'static str = `"$key`";"
+        $configContent = $configContent -replace 'pub const RS_PUB_KEY:\s*&''static str\s*=\s*"[^"]*";', "pub const RS_PUB_KEY: &'static str = ""$key"";"
         
-        # ICON Base64 (se disponível)
         if (Test-Path "logo-base64.txt") {
           $base64Logo = Get-Content "logo-base64.txt" -Raw
           
           if (![string]::IsNullOrEmpty($base64Logo)) {
             Write-Host "🎨 Aplicando logo TECS em Base64..." -ForegroundColor Cyan
             
-            # Substituir ICON para MacOS
-            $configContent = $configContent -replace '#\[cfg\(target_os\s*=\s*"macos"\)\]\s*pub const ICON:\s*&str\s*=\s*"[^"]*";', "#[cfg(target_os = `"macos`")]`npub const ICON: &str = `"$base64Logo`";"
-            
-            # Substituir ICON para outros sistemas
-            $configContent = $configContent -replace '#\[cfg\(not\(target_os\s*=\s*"macos"\)\)\]\s*pub const ICON:\s*&str\s*=\s*"[^"]*";', "#[cfg(not(target_os = `"macos`"))]`npub const ICON: &str = `"$base64Logo`";"
+            $configContent = $configContent -replace '#\[cfg\(target_os\s*=\s*"macos"\)\]\s*pub const ICON:\s*&str\s*=\s*"[^"]*";', "#[cfg(target_os = ""macos"")]`npub const ICON: &str = ""$base64Logo"";"
+            $configContent = $configContent -replace '#\[cfg\(not\(target_os\s*=\s*"macos"\)\)\]\s*pub const ICON:\s*&str\s*=\s*"[^"]*";', "#[cfg(not(target_os = ""macos""))]`npub const ICON: &str = ""$base64Logo"";"
           }
         }
         
@@ -220,26 +200,25 @@ pub const RENDEZVOUS_SERVERS: &'static [&'static str] = &[
         $commonContent = Get-Content $commonPath -Raw
         
         $server = $env:RUSTDESK_SERVER
-        $commonContent = $commonContent -replace 'let rendezvous_server\s*=\s*socket_client::get_target_addr\(&format!\(".*?:\{\}",\s*config::RENDEZVOUS_PORT\)\)\?;', "let rendezvous_server = socket_client::get_target_addr(&format!(`"$server`:{}`, config::RENDEZVOUS_PORT))?;"
+        $commonContent = $commonContent -replace 'let rendezvous_server\s*=\s*socket_client::get_target_addr\(&format!\(".*?:\{\}",\s*config::RENDEZVOUS_PORT\)\)\?;', "let rendezvous_server = socket_client::get_target_addr(&format!(""$server:{}"", config::RENDEZVOUS_PORT))?;"
         
         $commonContent | Out-File -FilePath $commonPath -Encoding UTF8 -NoNewline
         
         Write-Host "✅ common.rs modificado!" -ForegroundColor Green
       shell: pwsh
     
-    - name: ✏️ Modificar main.rs (ocultar console)
+    - name: ✏️ Modificar main.rs
       run: |
         Write-Host "✏️ Modificando main.rs..." -ForegroundColor Cyan
         
         $mainPath = "src/main.rs"
         $mainContent = Get-Content $mainPath -Raw
         
-        # Descomentar windows_subsystem
         $mainContent = $mainContent -replace '//#!\[windows_subsystem\s*=\s*"windows"\]', '#![windows_subsystem = "windows"]'
         
         $mainContent | Out-File -FilePath $mainPath -Encoding UTF8 -NoNewline
         
-        Write-Host "✅ main.rs modificado (console ocultado)!" -ForegroundColor Green
+        Write-Host "✅ main.rs modificado!" -ForegroundColor Green
       shell: pwsh
     
     - name: 🔨 Compilar UI Resources
@@ -299,7 +278,7 @@ pub const RENDEZVOUS_SERVERS: &'static [&'static str] = &[
         path: target/${{ github.event.inputs.build_type }}/tecs-remote.exe
         retention-days: 30
     
-    - name: 📋 Criar README do artefato
+    - name: 📋 Criar README
       run: |
         $buildType = "${{ github.event.inputs.build_type }}"
         $readme = @"
@@ -312,20 +291,20 @@ Build Date: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
 Build Number: ${{ github.run_number }}
 Commit: ${{ github.sha }}
 
-Configurações Aplicadas:
+Configurações:
 - Servidor: $env:RUSTDESK_SERVER:21116
 - Relay: $env:RUSTDESK_SERVER:21117
 - App Name: $env:APP_NAME
 - Chave Pública: Configurada ✓
 
 Arquivos:
-- tecs-remote.exe (Executável principal)
+- tecs-remote.exe
 
 Próximos Passos:
-1. Baixe o artefato do GitHub Actions
+1. Baixe o artefato
 2. Extraia tecs-remote.exe
 3. Teste em Windows 10/11
-4. Distribua para usuários
+4. Distribua
 
 Suporte:
 - Email: contato@tecs.net.br
@@ -346,29 +325,10 @@ Suporte:
     
     - name: 🎉 Resumo
       run: |
-        Write-Host "`n╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-        Write-Host "║              ✅ COMPILAÇÃO CONCLUÍDA COM SUCESSO!             ║" -ForegroundColor Green
-        Write-Host "╚════════════════════════════════════════════════════════════════╝`n" -ForegroundColor Green
-        
-        Write-Host "📦 ARTEFATO GERADO:" -ForegroundColor Cyan
-        Write-Host "   Nome: tecs-remote-windows-x64-${{ github.event.inputs.build_type }}" -ForegroundColor White
-        Write-Host "   Conteúdo:" -ForegroundColor White
-        Write-Host "   - tecs-remote.exe" -ForegroundColor Gray
-        Write-Host "   - README.txt" -ForegroundColor Gray
-        Write-Host ""
-        
-        Write-Host "📥 COMO BAIXAR:" -ForegroundColor Yellow
-        Write-Host "   1. Vá para aba 'Actions' deste repositório" -ForegroundColor White
+        Write-Host "`n✅ COMPILAÇÃO CONCLUÍDA!" -ForegroundColor Green
+        Write-Host "`n📦 Artefato: tecs-remote-windows-x64-${{ github.event.inputs.build_type }}" -ForegroundColor Cyan
+        Write-Host "`n📥 Para baixar:" -ForegroundColor Yellow
+        Write-Host "   1. Vá para aba Actions" -ForegroundColor White
         Write-Host "   2. Clique neste workflow" -ForegroundColor White
-        Write-Host "   3. Role até 'Artifacts'" -ForegroundColor White
-        Write-Host "   4. Baixe 'tecs-remote-windows-x64-${{ github.event.inputs.build_type }}'" -ForegroundColor White
-        Write-Host ""
-        
-        Write-Host "🧪 PRÓXIMOS PASSOS:" -ForegroundColor Cyan
-        Write-Host "   1. Baixe e extraia o artefato" -ForegroundColor White
-        Write-Host "   2. Execute tecs-remote.exe" -ForegroundColor White
-        Write-Host "   3. Verifique logo e configurações" -ForegroundColor White
-        Write-Host "   4. Teste conexão com servidor" -ForegroundColor White
-        Write-Host "   5. Distribua para usuários" -ForegroundColor White
-        Write-Host ""
+        Write-Host "   3. Baixe o artefato" -ForegroundColor White
       shell: pwsh
