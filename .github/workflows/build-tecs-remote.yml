@@ -279,8 +279,8 @@ jobs:
         retention-days: 30
 
   
- - name: 📋 Criar README
-      run: |
+     - name: 📋 Criar README
+       run: |
         $buildType = "${{ github.event.inputs.build_type }}"
         $readmeContent = "TECS Remote - Build Automatico`n`n"
         $readmeContent += "Build Type: $buildType`n"
